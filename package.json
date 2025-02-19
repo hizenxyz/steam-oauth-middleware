@@ -1,0 +1,18 @@
+{
+  "name": "expresssteamtesting",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "npx tsx src/index.ts"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "openid": "^2.0.12",
+    "url": "^0.11.4"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/openid": "^2.0.5",
+    "tsx": "^4.19.3"
+  }
+}
