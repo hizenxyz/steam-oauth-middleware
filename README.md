@@ -1,4 +1,4 @@
-# Express Steam Provider
+# Steam OAuth Middleware
 
 A Simple Node.js Express application that provides Steam authentication and API integration services. This middleware implements OAuth 2.0-like flow for Steam authentication, allowing applications to authenticate users through their Steam accounts.
 
