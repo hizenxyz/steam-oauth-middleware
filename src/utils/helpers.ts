@@ -6,9 +6,11 @@ const extractClientCredentials = (req: express.Request): { clientId?: string; cl
 
     if (req.headers.authorization?.startsWith('Basic ')) {
         const base64 = req.headers.authorization.split(' ')[1];
-        const [id, secret] = Buffer.from(base64, 'base64').toString().split(':');
-        clientId = id;
-        clientSecret = secret;
+        if (base64) {
+            const [id, secret] = Buffer.from(base64, 'base64').toString().split(':');
+            clientId = id;
+            clientSecret = secret;
+        }
     }
 
     const { client_id, client_secret } = req.body || {};

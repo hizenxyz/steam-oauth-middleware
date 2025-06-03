@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import jwt from 'jsonwebtoken';
 import { sessionStore } from '../store/session-store';
 import { SteamAuthProvider } from '../providers/steam-auth-provider';
-import { SteamCallbackSession, SteamAuthSession, TokenResponse } from '../types';
+import type { SteamCallbackSession, SteamAuthSession, TokenResponse } from '../types';
 import { errorResponse, extractClientCredentials, getFullUrl } from '../utils/helpers';
 
 interface SteamAuthConfig {
@@ -16,8 +16,8 @@ export const createSteamAuthRouter = (steamProvider: SteamAuthProvider, config: 
     const router = express.Router();
     const { CLIENT_ID, CLIENT_SECRET, JWT_SECRET } = config;
 
-    // 1. /auth
-    router.get('/auth', (req, res) => {
+    // 1. /authorize
+    router.get('/authorize', (req, res): void | express.Response => {
         const { state, redirect_uri } = req.query;
         if (!state || !redirect_uri) {
             console.warn('Missing state or redirect_uri');
@@ -42,7 +42,7 @@ export const createSteamAuthRouter = (steamProvider: SteamAuthProvider, config: 
     });
 
     // 2. /callback
-    router.get('/callback', async (req, res) => {
+    router.get('/callback', async (req, res): Promise<void | express.Response> => {
         const { session_key } = req.query;
         if (!session_key || typeof session_key !== 'string') {
             return errorResponse(res, 400, 'Missing session_key');
@@ -84,7 +84,7 @@ export const createSteamAuthRouter = (steamProvider: SteamAuthProvider, config: 
     });
 
     // 3. /token
-    router.post('/token', async (req, res) => {
+    router.post('/token', async (req, res): Promise<express.Response> => {
         try {
             const { clientId, clientSecret } = extractClientCredentials(req);
             const code = req.body?.code;
@@ -112,31 +112,30 @@ export const createSteamAuthRouter = (steamProvider: SteamAuthProvider, config: 
             };
 
             console.info(`Token issued for Steam ID: ${session.steamId}`);
-            res.json(response);
+            return res.json(response);
         } catch (err: unknown) {
             console.error('Token endpoint error:', err);
             return errorResponse(res, 500, 'Internal server error');
         }
     });
 
-// 4. /userinfo
-router.get('/userinfo', async (req, res) => {
-    const auth = req.headers.authorization;
-    if (!auth?.startsWith('Bearer ')) {
-        return errorResponse(res, 401, 'Missing or invalid token');
-    }
+    // 4. /userinfo
+    router.get('/userinfo', async (req, res): Promise<express.Response> => {
+        const auth = req.headers.authorization;
+        if (!auth?.startsWith('Bearer ')) {
+            return errorResponse(res, 401, 'Missing or invalid token');
+        }
 
-    const token = auth.slice(7);
-    try {
-        const payload = jwt.verify(token, JWT_SECRET) as { steamId: string };
-        const user = await steamProvider.getUserProfile(payload.steamId);
-        res.json(user);
-    } catch (err) {
-        console.error('JWT verification failed:', err);
-        return errorResponse(res, 401, 'Invalid token');
-    }
-});
-
+        const token = auth.slice(7);
+        try {
+            const payload = jwt.verify(token, JWT_SECRET) as { steamId: string };
+            const user = await steamProvider.getUserProfile(payload.steamId);
+            return res.json(user);
+        } catch (err) {
+            console.error('JWT verification failed:', err);
+            return errorResponse(res, 401, 'Invalid token');
+        }
+    });
 
     return router;
 }; 

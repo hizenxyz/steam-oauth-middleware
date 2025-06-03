@@ -1,13 +1,12 @@
-import { SteamAuthConfiguration, SteamProfileData } from '../types';
+import type { SteamAuthConfiguration, SteamProfileData } from '../types';
 import axios from 'axios';
-
 
 const OPENID = {
     NS: 'http://specs.openid.net/auth/2.0',
     IDENTITY: 'http://specs.openid.net/auth/2.0/identifier_select',
     CLAIMED_ID_PREFIX: 'https://steamcommunity.com/openid/id/',
     OP_ENDPOINT: 'https://steamcommunity.com/openid/login'
-};
+} as const;
 
 export class SteamAuthProvider {
     private readonly config: SteamAuthConfiguration;
