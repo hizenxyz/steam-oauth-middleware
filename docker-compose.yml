@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - STEAM_API_KEY=${STEAM_API_KEY}
+      - REALM=http://localhost:3000
+      - RETURN_URL=http://localhost:3000/auth/steam/authenticate
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm run dev 

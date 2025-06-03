@@ -1,37 +1,58 @@
-import express, { Request, Response } from "express";
-import { SteamAuth } from "./steam-auth/steam-auth";
+import express from "express";
+import dotenv from "dotenv";
+import { SteamAuthProvider } from "./providers/steam-auth-provider";
+import { createSteamAuthRouter } from "./routes/steam-routes";
+
+// Load environment variables
+dotenv.config();
 
 const app = express();
-const steam = new SteamAuth({
-    realm: "http://localhost:3000",
-    returnUrl: "http://localhost:3000/auth/steam/authenticate",
-    apiKey: "3048791120745874EE2F710E4E010699",
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
 });
 
-app.get("/", (req: Request, res: Response) => {
-    res.send("Hello World!");
+const {
+    STEAM_API_KEY,
+    REALM,
+    RETURN_URL,
+    CLIENT_ID,
+    CLIENT_SECRET,
+    JWT_SECRET,
+    PORT = 3000,
+} = process.env;
+
+app.get('/', (req, res) => res.send('Steam Auth API is running'));
+app.get('/health', (req, res) => {
+    const isHealthy = STEAM_API_KEY && REALM && RETURN_URL && CLIENT_ID && CLIENT_SECRET && JWT_SECRET;
+    res.json({
+        status: isHealthy ? 'healthy' : 'unhealthy',
+        timestamp: new Date().toISOString(),
+        config: {
+            steamApiKey: STEAM_API_KEY ? 'configured' : 'missing',
+            realm: REALM ? 'configured' : 'missing',
+            returnUrl: RETURN_URL ? 'configured' : 'missing',
+            clientId: CLIENT_ID ? 'configured' : 'missing',
+            clientSecret: CLIENT_SECRET ? 'configured' : 'missing',
+            jwtSecret: JWT_SECRET ? 'configured' : 'missing'
+        }
+    });
 });
 
-app.get("/auth/steam", async (req: Request, res: Response) => {
-    const redirectUrl = await steam.getRedirectUrl();
-    return res.redirect(redirectUrl);
-});
+if (!STEAM_API_KEY || !REALM || !RETURN_URL || !CLIENT_ID || !CLIENT_SECRET || !JWT_SECRET) {
+    console.error("Missing required environment variables.");
+} else {
+    const steamProvider = new SteamAuthProvider({
+        apiKey: STEAM_API_KEY,
+        realm: REALM,
+        returnUrl: RETURN_URL,
+        clientId: CLIENT_ID,
+        clientSecret: CLIENT_SECRET
+    });
+    app.use('/auth/steam', createSteamAuthRouter(steamProvider, { CLIENT_ID, CLIENT_SECRET, JWT_SECRET }));
+}
 
-app.get("/auth/steam/authenticate", async (req: Request, res: Response) => {
-    try {
-        const fullUrl = `${req.protocol}://${req.get("host")}${req.originalUrl}`;
-        const user = await steam.authenticate(fullUrl);
-
-        res.json({
-            message: "User authenticated",
-            user,
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).send("Failed to authenticate user.");
-    }
-});
-
-app.listen(3000, () => {
-    console.log(`Example app listening on port 3000`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
