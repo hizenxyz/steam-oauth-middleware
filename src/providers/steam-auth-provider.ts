@@ -77,53 +77,36 @@ export class SteamAuthProvider {
         return claimedId.startsWith(OPENID.CLAIMED_ID_PREFIX) && /^\d+$/.test(claimedId.replace(OPENID.CLAIMED_ID_PREFIX, ''));
     }
     
-    private async fetchProfileData(steamOpenId: string): Promise<SteamProfileData> {
+    private async fetchProfileData(steamOpenId: string): Promise<any> {
         const steamId = steamOpenId.replace(OPENID.CLAIMED_ID_PREFIX, '');
         const apiKey = this.config.apiKey;
         const cdnBase = 'https://cdn.akamai.steamstatic.com/steamcommunity/public/images';
-
+    
         try {
             const [playerSummary, profileItems] = await Promise.all([
                 this.getPlayerSummary(steamId, apiKey),
                 this.getProfileItems(steamId)
             ]);
-
+    
             const player = playerSummary;
             const items = profileItems;
-
-            const profile: SteamProfileData = {
-                _json: player,
+            
+            // Flattened for Clerk
+            const flatProfile = {
                 steamId,
+                sub: steamId,
                 username: player.personaname,
                 name: player.personaname,
-                profile: {
-                    url: player.profileurl,
-                    background: {
-                        static: items?.profile_background?.image_large ? `${cdnBase}/${items.profile_background.image_large}` : null,
-                        movie: items?.profile_background?.movie_webm ? `${cdnBase}/${items.profile_background.movie_webm}` : null
-                    },
-                    backgroundMini: {
-                        static: items?.mini_profile_background?.image_large ? `${cdnBase}/${items.mini_profile_background.image_large}` : null,
-                        movie: items?.mini_profile_background?.movie_webm ? `${cdnBase}/${items.mini_profile_background.movie_webm}` : null
-                    }
-                },
-                avatar: {
-                    small: player.avatar,
-                    medium: player.avatarmedium,
-                    large: player.avatarfull,
-                    animated: {
-                        static: items?.animated_avatar?.image_large ? `${cdnBase}/${items.animated_avatar.image_large}` : player.avatarfull,
-                        movie: items?.animated_avatar?.image_small ? `${cdnBase}/${items.animated_avatar.image_small}` : player.avatarfull
-                    },
-                    frame: {
-                        static: items?.avatar_frame?.image_large ? `${cdnBase}/${items.avatar_frame.image_large}` : null,
-                        movie: items?.avatar_frame?.image_small ? `${cdnBase}/${items.avatar_frame.image_small}` : null
-                    }
-                }
+                avatarSmall: player.avatar,
+                avatarMedium: player.avatarmedium,
+                avatarLarge: player.avatarfull,
+                profileUrl: player.profileurl,
+                backgroundStatic: items?.profile_background?.image_large ? `${cdnBase}/${items.profile_background.image_large}` : null,
+                backgroundMovie: items?.profile_background?.movie_webm ? `${cdnBase}/${items.profile_background.movie_webm}` : null,
             };
-
-            this.logger.info(`Fetched Steam profile for ${profile.username}`);
-            return profile;
+    
+            this.logger.info(`Fetched Steam profile for ${flatProfile.username}`);
+            return flatProfile;
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Unknown error fetching profile';
             throw new Error(`Steam profile fetch error: ${message}`);
